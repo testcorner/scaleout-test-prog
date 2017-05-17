@@ -24,7 +24,6 @@ def split_lines(s):
 @app.route("/")
 def hello():
     out = split_lines(subprocess.check_output(['adb', 'devices']))
-    adb_cmd = ['adb']
 
     devices = []
     devices.append("<table>")
@@ -60,72 +59,75 @@ def hello():
 
     devices.append("</tr>")
     for line in out[1:]:
-	devices.append("<tr>")
+        devices.append("<tr>")
         if not line.strip():
             continue
         if 'offline' in line:
             continue
-	
-	devices.append("<td>")
-	info = line.split('\t')
-	devices.append(info[0])
-	devices.append("</td>")
+        
+        if '* daemon not running. starting it now at tcp:5037 *' in line or 'daemon started successfully' in line:
+            continue
+        else:
+            devices.append("<td>")
+            info = line.split('\t')
+            devices.append(info[0])
+            devices.append("</td>")
 
-	devices.append("<td>")
-	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'getprop ro.product.model'])
-	adb_output = subprocess.check_output(adb_cmd)
-	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'getprop ro.product.model'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append(adb_output)
+            devices.append("</td>")
 	
-	devices.append("<td>")
-	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'getprop ro.product.cpu.abi'])
-	adb_output = subprocess.check_output(adb_cmd)
-	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'getprop ro.product.cpu.abi'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append(adb_output)
+            devices.append("</td>")
 	
-	devices.append("<td>")
-	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'getprop ro.sf.lcd_density'])
-	adb_output = subprocess.check_output(adb_cmd)
-    	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'getprop ro.sf.lcd_density'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append(adb_output)
+            devices.append("</td>")
 
-	devices.append("<td>")
-	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'wm size'])
-	adb_output = subprocess.check_output(adb_cmd)
-    	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'wm size'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append(adb_output)
+            devices.append("</td>")
 	
-	devices.append("<td>")
-	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'getprop ro.build.version.release'])
-	adb_output = subprocess.check_output(adb_cmd)
-	devices.append("Android ")
-    	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'getprop ro.build.version.release'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append("Android ")
+            devices.append(adb_output)
+            devices.append("</td>")
 	
-	devices.append("<td>")	
- 	adb_cmd = ['adb']
-	adb_cmd.extend(['-s' , info[0]])
-	adb_cmd.extend(['shell' , 'getprop ro.build.version.sdk'])
-	adb_output = subprocess.check_output(adb_cmd)
-	devices.append("API ")
-    	devices.append(adb_output)
-	devices.append("</td>")
+            devices.append("<td>")
+            adb_cmd = ['adb']
+            adb_cmd.extend(['-s' , info[0]])
+            adb_cmd.extend(['shell' , 'getprop ro.build.version.sdk'])
+            adb_output = subprocess.check_output(adb_cmd)
+            devices.append("API ")
+            devices.append(adb_output)
+            devices.append("</td>")
 	
-	devices.append("</tr>")
+        devices.append("</tr>")
 	adb_cmd = ['adb']
     devices.append("<table>")
     ret = ''.join(devices) 
     return Response(ret)
 
 if __name__ == "__main__":
-    app.run(host="140.138.147.49")
+    app.run(host="127.0.0.1")
