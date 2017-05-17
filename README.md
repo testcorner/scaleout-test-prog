@@ -1,1 +1,0 @@
-# scaleout-test-prog
