@@ -128,6 +128,6 @@ def hello():
     return Response(ret)
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="140.138.147.37")
 
 
