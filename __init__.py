@@ -9,6 +9,10 @@ from subprocess import check_output, CalledProcessError
 from flask import Flask, Response, request, redirect, url_for
 from werkzeug.utils import secure_filename
 
+from ftplib import FTP
+
+host='192.168.0.100'
+
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = set(['apk'])
 
@@ -152,55 +156,47 @@ def allowed_file(filename):
 
 @app.route('/uploads', methods=['GET', 'POST'])
 def upload_file():
-    if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            return redirect(request.url)
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            # after uploads file to change url
-            return redirect(url_for('foo'))
-    return '''
-        <!doctype html>
-        <title>Upload new File</title>
-        <h1>Upload new File</h1>
-        <form method=post enctype=multipart/form-data>
-        <p><input type=file name=file>
-        <input type=submit value=Upload>
-        </form>
-        '''
+    ftp = FTP(host)
+    ftp.login('kuo','12345')
+    
+    if request.method == 'GET':
+        test_project_name = request.args.get('test_project_name', '')
+        apk_file = request.args.get('apk_file', '')
+        apk_test_file = request.args.get('apk_test_file', '')
+        
+        if (test_project_name is "" or apk_file is "" or apk_test_file is ""):
+            return '''
+                input 'test_project_name','apk_file','apk_test_file' value.
+                '''
+        else:
+            apk_file_name_array = apk_file.split("/")
+            apk_file_name = apk_file_name_array[len(apk_file_name_array)-1]
+        
+            apk_test_file_array = apk_test_file.split("/")
+            apk_test_file_name = apk_test_file_array[len(apk_test_file_array)-1]
 
-@app.route('/apk_package_name')
-def get_apk_package_name():
+            ftp.storbinary("STOR /Users/kuo/Documents/GitHub/yzu/scaleout-test-prog/uploads/" + apk_file_name, open(apk_file, 'rb'))
+            ftp.storbinary("STOR /Users/kuo/Documents/GitHub/yzu/scaleout-test-prog/uploads/" + apk_test_file_name, open(apk_test_file, 'rb'))
+            ftp.quit()
+            get_apk_package_name(test_project_name)
+            return '''
+                uploads ok!
+                '''
+
+def get_apk_package_name(test_project_name):
     cmd_get_apk_file_name = split_lines(subprocess.check_output(['ls' , 'uploads']))
     
     apk_file_name = []
     
     for line in cmd_get_apk_file_name[0:] :
         
-        cmd_get_apk_package_name = ['./aapt', 'dump']
-        cmd_get_apk_package_name.extend(['badging', 'uploads/' + line])
-        cmd_get_apk_package_name.extend(['| grep' , 'package'])
-        cmd_get_apk_package_name.extend(['| awk' , "'{print $2}'"])
+        cmd_get_apk_package_name = ['./apk_package.sh', test_project_name, line]
         cmd_aapt_output = subprocess.check_output(cmd_get_apk_package_name)
         apk_file_name.append(cmd_aapt_output)
+        apk_file_name.append('<br>')
 
     ret = ''.join(apk_file_name)
-    return Response(ret)
-
-
-@app.route('/foo')
-def foo():
-    return 'Hello Foo!'
 
 if __name__ == "__main__":
     app.debug = True
-    app.run(host="127.0.0.1")
+    app.run(host)
