@@ -57,6 +57,10 @@ def hello():
     devices.append("</td>")
     
     devices.append("<td>")
+    devices.append("Board Specifications")
+    devices.append("</td>")
+    
+    devices.append("<td>")
     devices.append("release")
     devices.append("</td>")
     
