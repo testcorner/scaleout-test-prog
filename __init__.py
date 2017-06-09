@@ -69,14 +69,16 @@ def hello():
     devices.append("</td>")
     
     devices.append("</tr>")
-    for line in out[1:]:
+    for line in out[0:]:
         devices.append("<tr>")
         if not line.strip():
             continue
         if 'offline' in line:
             continue
         
-        if '* daemon not running. starting it now at tcp:5037 *' in line or 'daemon started successfully' in line:
+        if 'List of devices attached' in line or
+            '* daemon not running. starting it now at tcp:5037 *' in line or
+                'daemon started successfully' in line:
             continue
         else:
             devices.append("<td>")
