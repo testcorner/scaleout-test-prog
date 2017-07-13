@@ -18,8 +18,8 @@ fi
 
 # Add aapt to path
 for aapt_path in ${ANDROID_HOME}/build-tools/*/; do break; done
-
 export PATH="$PATH:${aapt_path}"
+
 package=`aapt dump badging uploads/$apk_file | grep package | awk '{print $2}' | sed s/name=//g | sed s/\'//g`
 versionCode=`aapt dump badging $apk_file | grep versionCode | awk '{print $3}' | sed s/versionCode=//g | sed s/\'//g`
 versionName=`aapt dump badging $apk_file | grep versionName | awk '{print $4}' | sed s/versionName=//g | sed s/\'//g`

@@ -11,7 +11,7 @@ from werkzeug.utils import secure_filename
 
 from ftplib import FTP
 
-host='192.168.0.100'
+host='127.0.0.1'
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = set(['apk'])
@@ -33,7 +33,7 @@ def split_lines(s):
     return re.split(r'[\r\n]+', s.rstrip())
 
 @app.route("/")
-def hello():
+def home():
     out = split_lines(subprocess.check_output(['adb', 'devices']))
     
     devices = []
@@ -150,6 +150,7 @@ def hello():
     ret = ''.join(devices) 
     return Response(ret)
 
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -196,6 +197,20 @@ def get_apk_package_name(test_project_name):
         apk_file_name.append('<br>')
 
     ret = ''.join(apk_file_name)
+
+@app.route('/testing_project', methods=['GET', 'POST'])
+def testing_project():
+    if request.method == 'POST':
+        test_project_name = request.form.get('test_project_name')
+        cmd_get_apk_package_name = ['./testing_project.sh', test_project_name]
+        cmd_testing_output = subprocess.check_output(cmd_get_apk_package_name)
+        return cmd_testing_output
+
+    return '''
+        Please re-enter the command
+        '''
+
+
 
 if __name__ == "__main__":
     app.debug = True
