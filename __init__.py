@@ -36,54 +36,64 @@ def hello():
     devices.append("<table>")
     devices.append("<tr>")
     
+    # Devices Serialno
     devices.append("<td>")
     devices.append("serialno")
     devices.append("</td>")
     
+    # Devices Model Name
     devices.append("<td>")
     devices.append("model name")
     devices.append("</td>")
     
+    # Devices CPU
     devices.append("<td>")
     devices.append("cpu")
     devices.append("</td>")
     
+    # Devices Density
     devices.append("<td>")
     devices.append("density")
     devices.append("</td>")
     
+    # Devices Size
     devices.append("<td>")
     devices.append("size")
     devices.append("</td>")
     
+    # Devices Board Specifications
     devices.append("<td>")
     devices.append("Board Specifications")
     devices.append("</td>")
     
+    # Devices release
     devices.append("<td>")
     devices.append("release")
     devices.append("</td>")
     
+    # Devices API Level
     devices.append("<td>")
     devices.append("API Level")
     devices.append("</td>")
     
     devices.append("</tr>")
-    for line in out[0:]:
+    for line in out[1:]:
         devices.append("<tr>")
         if not line.strip():
             continue
         if 'offline' in line:
             continue
         
-        if 'List of devices attached' in line or '* daemon not running. starting it now at tcp:5037 *' in line or 'daemon started successfully' in line:
+        if '* daemon not running. starting it now at tcp:5037 *' in line or 'daemon started successfully' in line:
             continue
         else:
+            # Devices Serialno
             devices.append("<td>")
             info = line.split('\t')
             devices.append(info[0])
             devices.append("</td>")
             
+            # Devices Model Name
             devices.append("<td>")
             cmd_adb_get_devices_model = ['adb']
             cmd_adb_get_devices_model.extend(['-s' , info[0]])
@@ -92,6 +102,7 @@ def hello():
             devices.append(cmd_adb_get_devices_model)
             devices.append("</td>")
             
+            # Devices CPU
             devices.append("<td>")
             cmd_adb_get_devices_cpu = ['adb']
             cmd_adb_get_devices_cpu.extend(['-s' , info[0]])
@@ -100,6 +111,7 @@ def hello():
             devices.append(cmd_adb_get_devices_cpu)
             devices.append("</td>")
             
+            # Devices Density
             devices.append("<td>")
             cmd_adb_get_devices_lcd_density = ['adb']
             cmd_adb_get_devices_lcd_density.extend(['-s' , info[0]])
@@ -108,6 +120,7 @@ def hello():
             devices.append(cmd_adb_get_devices_lcd_density)
             devices.append("</td>")
             
+            # Devices Size
             devices.append("<td>")
             cmd_adb_get_devices_size = ['adb']
             cmd_adb_get_devices_size.extend(['-s' , info[0]])
@@ -117,6 +130,7 @@ def hello():
             devices.append(devices_split[1])
             devices.append("</td>")
             
+            # Devices Board Specifications
             devices.append("<td>")
             devices_size = devices_split[1].split('x')
             display_size = math.sqrt(pow(float(devices_size[0])/float(cmd_adb_get_devices_lcd_density),2)+pow(float(devices_size[1])/float(cmd_adb_get_devices_lcd_density),2))
@@ -126,6 +140,7 @@ def hello():
                 devices.append('SmartPhone')
             devices.append("</td>")
             
+            # Devices release
             devices.append("<td>")
             cmd_adb_get_devices_version_release = ['adb']
             cmd_adb_get_devices_version_release.extend(['-s' , info[0]])
@@ -135,6 +150,7 @@ def hello():
             devices.append(cmd_adb_get_devices_version_release)
             devices.append("</td>")
             
+            # Devices API Level
             devices.append("<td>")
             cmd_adb_get_devices_api_level = ['adb']
             cmd_adb_get_devices_api_level.extend(['-s' , info[0]])
@@ -145,9 +161,9 @@ def hello():
             devices.append("</td>")
         
         devices.append("</tr>")
-
+    
     devices.append("<table>")
-    ret = ''.join(devices) 
+    ret = ''.join(devices)
     return Response(ret)
 
 def allowed_file(filename):
