@@ -5,21 +5,26 @@ import re
 import math
 import string
 import threading
+import json
+import codecs
+
 
 from subprocess import check_output, CalledProcessError
-from flask import Flask, Response, request, redirect, url_for
+from flask import Flask, Response, request, redirect, url_for, jsonify
 from werkzeug.utils import secure_filename
 from time import localtime, strftime
-
-from ftplib import FTP
 
 host='127.0.0.1'
 
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = set(['apk'])
+APK_FILE_FOLDER = 'apk_file'
+APK_TEST_FILE_FOLDER = 'apk_test_file'
+ALLOWED_EXTENSIONS = set(['apk','json'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['APK_FILE_FOLDER'] = APK_FILE_FOLDER
+app.config['APK_TEST_FILE_FOLDER'] = APK_TEST_FILE_FOLDER
 
 def split_lines(s):
     """Splits lines in a way that works even on Windows and old devices.
@@ -172,53 +177,58 @@ def home():
     ret = ''.join(devices)
     return Response(ret)
 
-
-def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 @app.route('/uploads', methods=['GET', 'POST'])
 def upload_file():
-    ftp = FTP(host)
-    ftp.login('kuo','12345')
-    
-    if request.method == 'GET':
-        test_project_name = request.args.get('test_project_name', '')
-        apk_file = request.args.get('apk_file', '')
-        apk_test_file = request.args.get('apk_test_file', '')
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'apk_file' not in request.files:
+            
+            return redirect(request.url)
         
-        if (test_project_name is "" or apk_file is "" or apk_test_file is ""):
+        if 'apk_test_file' not in request.files:
+            
+            return redirect(request.url)
+        
+        test_project_name = request.form.get('test_project_name')
+        apk_file = request.files['apk_file']
+        apk_test_file = request.files['apk_test_file']
+        print test_project_name
+        if (test_project_name is "" or apk_file.filename == '' or apk_test_file.filename == ''):
             return '''
                 input 'test_project_name','apk_file','apk_test_file' value.
                 '''
         else:
-            apk_file_name_array = apk_file.split("/")
-            apk_file_name = apk_file_name_array[len(apk_file_name_array)-1]
             
-            apk_test_file_array = apk_test_file.split("/")
-            apk_test_file_name = apk_test_file_array[len(apk_test_file_array)-1]
+            test_project_folder = os.path.join(app.config['UPLOAD_FOLDER'], test_project_name)
             
-            ftp.storbinary("STOR /Users/kuo/Documents/GitHub/yzu/scaleout-test-prog/uploads/" + apk_file_name, open(apk_file, 'rb'))
-            ftp.storbinary("STOR /Users/kuo/Documents/GitHub/yzu/scaleout-test-prog/uploads/" + apk_test_file_name, open(apk_test_file, 'rb'))
-            ftp.quit()
-            get_apk_package_name(test_project_name)
+            if not os.path.exists(test_project_folder):
+                os.makedirs(test_project_folder)
+            
+            test_project_apk_file_folder = os.path.join(test_project_folder, app.config['APK_FILE_FOLDER'])
+            
+            if not os.path.exists(test_project_apk_file_folder):
+                os.makedirs(test_project_apk_file_folder)
+            
+            test_project_apk_test_file_folder = os.path.join(test_project_folder, app.config['APK_TEST_FILE_FOLDER'])
+            
+            if not os.path.exists(test_project_apk_test_file_folder):
+                os.makedirs(test_project_apk_test_file_folder)
+            
+            print test_project_folder
+            print test_project_apk_file_folder
+            print test_project_apk_test_file_folder
+
+            apk_file_filename = secure_filename(apk_file.filename)
+            apk_file.save(os.path.join(test_project_apk_file_folder, apk_file_filename))
+            
+            apk_test_file_filename = secure_filename(apk_test_file.filename)
+            apk_test_file.save(os.path.join(test_project_apk_test_file_folder, apk_test_file_filename))
             return '''
                 uploads ok!
                 '''
-
-def get_apk_package_name(test_project_name):
-    cmd_get_apk_file_name = split_lines(subprocess.check_output(['ls' , 'uploads']))
-    
-    apk_file_name = []
-    
-    for line in cmd_get_apk_file_name[0:] :
-        
-        cmd_get_apk_package_name = ['./apk_package.sh', test_project_name, line]
-        cmd_aapt_output = subprocess.check_output(cmd_get_apk_package_name)
-        apk_file_name.append(cmd_aapt_output)
-        apk_file_name.append('<br>')
-    
-    ret = ''.join(apk_file_name)
+    return '''
+        input 'test_project_name','apk_file','apk_test_file' value.
+        '''
 
 class threadServer(threading.Thread):
     def __init__(self, test_project_name, nowTime, device_name):
@@ -298,7 +308,50 @@ def testing_project():
         Please re-enter the command
         '''
 
+@app.route('/get_devices_status')
+def get_devices_status():
+    out = split_lines(subprocess.check_output(['adb', 'devices']))
+    
+    devices = []
+    
+    devices.append('[')
+    
+    for line in out[1:]:
+        if not line.strip():
+            continue
+        if 'offline' in line:
+            continue
+        
+        if '* daemon not running. starting it now at tcp:5037 *' in line or 'daemon started successfully' in line:
+            continue
+        else:
+            devices.append('{')
+            
+            info = line.split('\t')
+            devices.append('"devices":')
+            devices.append('"')
+            devices.append(info[0])
+            devices.append('"')
+            
+            devices.append(',')
+            
+            devices.append('"status":')
+            devices.append('"')
+            devices.append(info[1])
+            devices.append('"')
+            
+            devices.append('}')
+            devices.append(',')
 
+    devices.append(']')
+    ret = ''.join(devices)
+    parsed_json = json.dumps(ret)
+    with codecs.open('devices.json', 'w', 'utf-8') as f:
+        f.write(parsed_json)
+
+    json_dict = json.loads(parsed_json)
+    
+    return Response(json_dict)
 
 if __name__ == "__main__":
     app.debug = True
