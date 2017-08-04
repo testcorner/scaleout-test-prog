@@ -49,7 +49,7 @@ if [ -d "uploads/$test_project_name" ]; then
 
     echo `adb -s $test_device_serial_number shell pm install -r "/data/local/tmp/$apk_test_package"` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/test_apk_install
 
-    echo `adb -s $test_device_serial_number shell am instrument -w $apk_test_package/android.support.test.runner.AndroidJUnitRunner` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/report
+    echo `adb -s $test_device_serial_number shell am instrument -w -r $apk_test_package/android.support.test.runner.AndroidJUnitRunner` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/report
 
     echo `adb -s $test_device_serial_number shell pm uninstall $apk_package` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/apk_uninstall
 
