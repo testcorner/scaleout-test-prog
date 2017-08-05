@@ -126,8 +126,15 @@ def home():
             devices.append("<td>")
             cmd_adb_get_devices_lcd_density = ['adb']
             cmd_adb_get_devices_lcd_density.extend(['-s' , info[0]])
-            cmd_adb_get_devices_lcd_density.extend(['shell' , 'getprop ro.sf.lcd_density'])
+            cmd_adb_get_devices_lcd_density.extend(['shell' , 'getprop qemu.sf.lcd_density'])
             cmd_adb_get_devices_lcd_density = subprocess.check_output(cmd_adb_get_devices_lcd_density)
+            print len(cmd_adb_get_devices_lcd_density)
+            if len(cmd_adb_get_devices_lcd_density) < 3:
+                cmd_adb_get_devices_lcd_density = ['adb']
+                cmd_adb_get_devices_lcd_density.extend(['-s' , info[0]])
+                cmd_adb_get_devices_lcd_density.extend(['shell' , 'getprop ro.sf.lcd_density'])
+                cmd_adb_get_devices_lcd_density = subprocess.check_output(cmd_adb_get_devices_lcd_density)
+
             devices.append(cmd_adb_get_devices_lcd_density)
             devices.append("</td>")
             
