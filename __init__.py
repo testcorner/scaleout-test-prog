@@ -128,8 +128,9 @@ def home():
             cmd_adb_get_devices_lcd_density.extend(['-s' , info[0]])
             cmd_adb_get_devices_lcd_density.extend(['shell' , 'getprop qemu.sf.lcd_density'])
             cmd_adb_get_devices_lcd_density = subprocess.check_output(cmd_adb_get_devices_lcd_density)
-            print len(cmd_adb_get_devices_lcd_density)
+            
             try:
+                # if `getprop qemu.sf.lcd_density` is not None can be try it
                 x = float(cmd_adb_get_devices_lcd_density)
             except ValueError:
                 cmd_adb_get_devices_lcd_density = ['adb']
