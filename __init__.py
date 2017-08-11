@@ -268,22 +268,22 @@ class threadServer(threading.Thread):
         self.lock.release()
 
 # Uploads Json file to testing project
-@app.route('/uploads_testint_project', methods=['GET', 'POST'])
-def uploads_testint_project():
+@app.route('/uploads_testing_project', methods=['GET', 'POST'])
+def uploads_testing_project():
     if request.method == 'POST':
         threads = []
         devices_info = []
         count = 0
         # check if the post request has the file part
-        if 'testint_project_json' not in request.files:
+        if 'testing_project_json' not in request.files:
             
             return redirect(request.url)
         
-        testing_project_json = request.files['testint_project_json']
+        testing_project_json = request.files['testing_project_json']
         
         if (testing_project_json == ''):
             return '''
-                input 'testint_project_json' key and value.
+                input 'testing_project_json' key and value.
                 '''
         else:
             testing_project_folder = os.path.join(app.config['UPLOAD_TESTING_PROJECT'])
@@ -350,7 +350,7 @@ def uploads_testint_project():
                 return "{0} tested. {1} left.".format(count, len(devices_infomation) - count)
 
     return '''
-        input 'testint_project_json' key and value.
+        input 'testing_project_json' key and value.
         '''
 
 @app.route('/testing_project', methods=['GET', 'POST'])
