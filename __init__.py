@@ -333,7 +333,7 @@ def uploads_testing_project():
                     check_testing_qualifications = True
                 
                 # Get current time
-                nowTime = strftime('%Y-%m-%d_%H_%M_%S', localtime())
+                nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
                 print check_testing_qualifications
                 # if `check_testing_qualifications` is true can run <devices_infomation[i]['serialno']> this devices
                 if check_testing_qualifications:
@@ -393,7 +393,7 @@ def testing_project():
         
         #get current time
         print "Getting time."
-        nowTime = strftime('%Y-%m-%d_%H_%M_%S', localtime())
+        nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
         print "Current time: " + nowTime
         
         #processins multi-threading
