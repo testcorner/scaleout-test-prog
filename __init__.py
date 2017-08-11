@@ -19,6 +19,8 @@ host='127.0.0.1'
 
 # Global variable to uploads `testing_projects` json file
 UPLOAD_TESTING_PROJECT = 'uploads_project_json'
+# Global variable to test_result `testing_result`
+TESTING_RESULT_PROJECT = 'testing_result'
 # Global variable to uploads `testing_projects` apk file
 UPLOAD_FOLDER = 'uploads'
 APK_FILE_FOLDER = 'apk_file'
@@ -29,6 +31,8 @@ app = Flask(__name__)
 
 # Global variable to uploads `testing_projects` json file
 app.config['UPLOAD_TESTING_PROJECT'] = UPLOAD_TESTING_PROJECT
+# Global variable to test_result `testing_result`
+app.config['TESTING_RESULT_PROJECT'] = TESTING_RESULT_PROJECT
 # Global variable to uploads `testing_projects` apk file
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['APK_FILE_FOLDER'] = APK_FILE_FOLDER
@@ -334,10 +338,32 @@ def uploads_testing_project():
                 
                 # Get current time
                 nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
+                
                 print check_testing_qualifications
                 # if `check_testing_qualifications` is true can run <devices_infomation[i]['serialno']> this devices
                 if check_testing_qualifications:
                     print test_project_name, nowTime, devices_infomation[i]['serialno']
+                    
+                    testing_result_folder = os.path.join(app.config['TESTING_RESULT_PROJECT'])
+                    
+                    if not os.path.exists(testing_result_folder):
+                        os.makedirs(testing_result_folder)
+                    
+                    testing_project_folder = os.path.join(testing_result_folder, test_project_name)
+
+                    if not os.path.exists(testing_project_folder):
+                        os.makedirs(testing_project_folder)
+
+                    testing_nowTime_folder = os.path.join(testing_project_folder, nowTime)
+    
+                    if not os.path.exists(testing_nowTime_folder):
+                        os.makedirs(testing_nowTime_folder)
+
+                    testing_serialno_folder = os.path.join(testing_nowTime_folder, devices_infomation[i]['serialno'])
+    
+                    if not os.path.exists(testing_serialno_folder):
+                        os.makedirs(testing_serialno_folder)
+
                     # To create and start the thread then append it to threads
                     t = threadServer(test_project_name, nowTime, devices_infomation[i]['serialno'])
                     t.start()
@@ -394,6 +420,7 @@ def testing_project():
         #get current time
         print "Getting time."
         nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
+        
         print "Current time: " + nowTime
         
         #processins multi-threading
