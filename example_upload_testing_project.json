@@ -6,10 +6,10 @@
     ,
     "devices": 
         {
-            "os": ["7.0","6.0"],
-            "API Level": ["24","23"],
-            "deviceType": [""],
-            "display": [""],
-            "arch": [""]
+            "os"        : [ "7.0", "6.0", "7.1.1" ],
+            "API Level" : [ "24", "23", "25" ],
+            "deviceType": [ "Smartphone", "Tablet" ],
+            "display"   : [ "420", "480" ],
+            "arch"      : [ "x86", "x86_64", "armeabi-v7a", "arm64-v8a" ]
         }
 }
