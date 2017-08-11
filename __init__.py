@@ -515,7 +515,7 @@ def get_devices_info():
                     if display_size >= 7:
                         devices.append('Tablet')
                     else :
-                        devices.append('SmartPhone')
+                        devices.append('Smartphone')
                     devices.append('"')
         
                 elif key == "status":
