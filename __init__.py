@@ -166,7 +166,7 @@ def home():
             if display_size >= 7:
                 devices.append('Tablet')
             else :
-                devices.append('SmartPhone')
+                devices.append('Smartphone')
             devices.append("</td>")
             
             # Devices release
