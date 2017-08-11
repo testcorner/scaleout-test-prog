@@ -10,30 +10,6 @@ test_device_serial_number=$3
 for aapt_path in ${ANDROID_HOME}/build-tools/*/; do break; done
 export PATH="$PATH:${aapt_path}"
 
-if [ ! -d "testing_result" ]; then
-
-    mkdir testing_result
-
-fi
-
-if [ ! -d "testing_result/$test_project_name" ]; then
-
-    mkdir testing_result/$test_project_name
-
-fi
-
-if [ ! -d "testing_result/$test_project_name/$test_data" ]; then
-
-    mkdir testing_result/$test_project_name/$test_data
-
-fi
-
-if [ ! -d "testing_result/$test_project_name/$test_data/$test_device_serial_number" ]; then
-
-    mkdir testing_result/$test_project_name/$test_data/$test_device_serial_number
-
-fi
-
 if [ -d "uploads/$test_project_name" ]; then
 
     #echo "Directory $test_project_name exists."
