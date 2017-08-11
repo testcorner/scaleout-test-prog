@@ -1,0 +1,15 @@
+{
+    "project": 
+        {
+            "project_name": "story3"
+        }
+    ,
+    "devices": 
+        {
+            "os": ["7.0","6.0"],
+            "API Level": ["24","23"],
+            "deviceType": [""],
+            "display": [""],
+            "arch": [""]
+        }
+}
