@@ -193,11 +193,7 @@ def home():
             devices.append(cmd_adb_get_devices_api_level)
             devices.append("</td>")
         
-<<<<<<< HEAD
         devices.append("</tr>")
-=======
-    devices.append("</tr>")
->>>>>>> 564eb61d48124cdf44bbebd0a727aa5802782fd3
     
     devices.append("<table>")
     ret = ''.join(devices)
