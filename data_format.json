@@ -1,0 +1,80 @@
+{
+    "devices_info": [
+        "serial_number",
+        "model_name",
+        "arch",
+        "display",
+        "size",
+        "deviceType",
+        "os",
+        "API Level",
+        "status"
+    ],
+
+    "serial_number": {
+        "name": "serialno"
+    },
+
+    "model_name": {
+        "name": "model name",
+        "command": [
+            "shell",
+            "getprop ro.product.model"
+        ]
+    },
+
+    "arch": {
+        "name": "cpu",
+        "command": [
+            "shell",
+            "getprop ro.product.cpu.abi"
+        ]
+    },
+
+    "display": {
+        "name": "density",
+        "command1": [
+            "shell", 
+            "getprop qemu.sf.lcd_density"
+        ],
+        "command2": [
+            "shell" ,
+            "getprop ro.sf.lcd_density"
+        ]
+    },
+
+    "size": {
+        "name": "size",
+        "command": [
+            "shell",
+            "wm size"
+        ]
+    },
+
+    "deviceType": {
+        "name": "Board Specifications"
+    },
+
+    "os": {
+        "name": "release",
+        "command": [
+            "shell", 
+            "getprop ro.build.version.release"
+        ]
+    },
+
+    "API Level": {
+        "name": "API Level",
+        "command": [
+            "shell",
+            "getprop ro.build.version.sdk"]
+    },
+
+    "status": {
+        "name": "status"
+    }
+
+}
+
+
+        
