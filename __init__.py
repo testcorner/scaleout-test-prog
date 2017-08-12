@@ -192,6 +192,7 @@ def home():
             devices.append("API ")
             devices.append(cmd_adb_get_devices_api_level)
             devices.append("</td>")
+
         devices.append("</tr>")
     
     devices.append("<table>")
