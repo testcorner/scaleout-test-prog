@@ -16,7 +16,7 @@ from werkzeug.utils import secure_filename
 from time import localtime, strftime
 from collections import OrderedDict
 
-host='127.0.0.1'
+host='0.0.0.0'
 
 app = Flask(__name__)
 
@@ -42,9 +42,11 @@ app.config['APK_TEST_FILE_FOLDER'] = APK_TEST_FILE_FOLDER
 
 DATA_FORMAT = 'data_format.json'
 DEVICES_INFORNATION = 'devices.json'
+TESTAPK_CLASSNAMES_JSON = 'ClassNames.json'
 
 app.config['DATA_FORMAT'] = DATA_FORMAT
 app.config['DEVICES_INFORNATION'] = DEVICES_INFORNATION
+app.config['TESTAPK_CLASSNAMES_JSON'] = TESTAPK_CLASSNAMES_JSON
 
 devices_information = None
 
@@ -295,6 +297,13 @@ def upload_file():
             apk_test_file_filename = secure_filename(apk_test_file.filename)
             # Save upload <apk_test_file> filename
             apk_test_file.save(os.path.join(test_project_apk_test_file_folder, apk_test_file_filename))
+            
+            cmd_test_apk_classnames_json = ['java', '-jar']
+            cmd_test_apk_classnames_json.extend(['testapk_testClassname.jar'])
+            cmd_test_apk_classnames_json.extend(['-i', os.path.join(test_project_apk_test_file_folder, apk_test_file_filename)])
+            
+            subprocess.check_output(cmd_test_apk_classnames_json)
+
             return '''
                 uploads ok!
                 '''
@@ -302,50 +311,79 @@ def upload_file():
         input 'test_project_name','apk_file','apk_test_file' value.
         '''
 
-class threadServer(threading.Thread):
-    def __init__(self, test_project_name, nowTime, device_name):
+class threadTestClassname(threading.Thread):
+    def __init__(self, test_project_name, classname, nowTime):
         threading.Thread.__init__(self)
         self.pro_name = test_project_name
+        self.classname = classname
         self.Time = nowTime
-        self.dev_name = device_name
-    
-    def run(self):
-        cmd_get_apk_package_name = ['./testing_project.sh', self.pro_name, self.Time, self.dev_name]
-        cmd_testing_output = subprocess.check_output(cmd_get_apk_package_name)
-        devices_information[self.dev_name]['status'] = 'device'
-        write_JSON_queue.put(thread_change_devices)
-        t = thread_change_devices()
-        t.start()
 
 class thread_change_devices(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
-        self.lock = threading.Lock()
     
     def run(self):
         while not write_JSON_queue.empty():
             write_JSON_queue.get()
             write_JSON(app.config['DEVICES_INFORNATION'], devices_information)
 
-class threadArrangement(threading.Thread):
-    def __init__(self):
+class threadServer(threading.Thread):
+    def __init__(self, test_project_name, classname, nowTime, device_name):
         threading.Thread.__init__(self)
-        self.lock = threading.Lock()
-
+        self.pro_name = test_project_name
+        self.classname = classname
+        self.Time = nowTime
+        self.dev_name = device_name
+    
     def run(self):
+        print self.pro_name, self.classname, self.Time, self.dev_name
+        cmd_test_class_name = ['./testing_project.sh', self.pro_name, self.classname, self.Time, self.dev_name]
+        cmd_testing_output = subprocess.check_output(cmd_test_class_name)
+        devices_information[self.dev_name]['status'] = 'device'
+        write_JSON_queue.put(thread_change_devices)
+        t = thread_change_devices()
+        t.start()
+
+class threadArrangement(threading.Thread):
+    def __init__(self, test_project_name, devices_Through_rules, nowTime):
+        threading.Thread.__init__(self)
+        self.pro_name = test_project_name
+        self.devices = devices_Through_rules
+        self.Time = nowTime
+    
+    def run(self):
+        
+        for devices_serialno in self.devices:
+            print "install", devices_serialno
+            cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
+            subprocess.check_output(cmd_install_test_class_name)
+        
+        threads = []
         while not queue.empty():
-            project_thread = queue.get()
-            devices_serialno = project_thread.dev_name
-            if 'device' in devices_information[devices_serialno]['status']:
-                devices_information[devices_serialno]['status'] = 'busy'
-                project_thread.start()
-                write_JSON_queue.put(thread_change_devices)
-                t = thread_change_devices()
-                t.start()
-            else :
-                queue.put(project_thread)
-                t = thread_change_devices()
-                t.start()
+            for devices_serialno in self.devices:
+                project_thread = queue.get()
+                if 'device' in devices_information[devices_serialno]['status']:
+                    devices_information[devices_serialno]['status'] = 'busy'
+                    testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
+                    threads.append(testclassname_thread)
+                    testclassname_thread.start()
+                    write_JSON_queue.put(thread_change_devices)
+                    t = thread_change_devices()
+                    t.start()
+                    # break
+                else :
+                    queue.put(project_thread)
+                    t = thread_change_devices()
+                    t.start()
+
+        for t in threads:
+            t.join()
+
+        for devices_serialno in self.devices:
+            print "uninstall", devices_serialno
+            cmd_uninstall_test_class_name = ['./uninstall_apk.sh', self.pro_name, self.Time, devices_serialno]
+            subprocess.check_output(cmd_uninstall_test_class_name)
+
 
 # Uploads Json file to testing project
 @app.route('/uploads_testing_project', methods=['GET', 'POST'])
@@ -412,15 +450,21 @@ def uploads_testing_project():
             # Get current time
             nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
             
+            Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
+            
+            ClassNames = Classnames_Json['Classnames']
+            
             if len(devices_Through_rules) > 0:
                 
                 for devices_serialno in devices_Through_rules:
                     check_dir_exists(os.path.join(app.config['TESTING_RESULT_PROJECT'], test_project_name, nowTime, devices_serialno))
-                    project_thread = threadServer(test_project_name, nowTime, devices_serialno)
-                    queue.put(project_thread)
-
                     count += 1
-                t = threadArrangement()
+                
+                for classname in ClassNames:
+                    classname_thread = threadTestClassname(test_project_name, classname, nowTime)
+                    queue.put(classname_thread)
+                        
+                t = threadArrangement(test_project_name, devices_Through_rules, nowTime)
                 t.start()
 
             if count == 0:
