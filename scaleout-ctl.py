@@ -22,7 +22,7 @@ def create_json(data, object, key, value):
     return data
 
 def main():
-    parser = argparse.ArgumentParser(prog='CLI.py', usage='python %(prog)s [options] [args]')
+    parser = argparse.ArgumentParser(prog='scaleout-ctl.py', usage='python %(prog)s [options] [args]')
     
     # internet address
     parser.add_argument('-addr', '--address', default='127.0.0.1:5000', type=str, help="Host IP address")
@@ -33,6 +33,12 @@ def main():
     # apk_file / apke_test_file
     parser.add_argument('-a', '--apk', type=str, help="Application APK")
     parser.add_argument('-t', '--test-apk', type=str, help="Test application APK")
+    
+    # test_size
+    size_group = parser.add_mutually_exclusive_group()
+    size_group.add_argument('--small', action='store_true', help="Small test project size")
+    size_group.add_argument('--medium', action='store_true', help="Medium test project size")
+    size_group.add_argument('--large', action='store_true', help="Large test project size")
     
     # conditions
     parser.add_argument('-os', nargs='+', help="Android release")
@@ -65,11 +71,29 @@ def main():
             subprocess.call(['curl', '-F', 'test_project_name=' + args.project, '-F', 'apk_file=@' + args.apk, '-F', 'apk_test_file=@' + args.test_apk, '-X', 'POST', args.address + '/uploads'])
             print "APK: " + args.apk, args.test_apk
     
+        size = 'default'
+    
         data = {}
         data['project'] = {}
         data['devices'] = {}
         
         data = create_json(data, 'project', 'project_name', args.project)
+        
+        if args.small:
+            data = create_json(data, 'project', 'test_size', 'SmallTest')
+            size = 'SmallTest'
+        
+        elif args.medium:
+            data = create_json(data, 'project', 'test_size', 'MediumTest')
+            size = 'MediumTest'
+        
+        elif args.large:
+            data = create_json(data, 'project', 'test_size', 'LargeTest')
+            size = 'LargeTest'
+                
+        else:
+            data = create_json(data, 'project', 'test_size', 'ClassNames')
+            size = 'AllTest'
         
         for i in xrange(len(CONDITIONS_NAME)):
             data = create_json(data, 'devices', CONDITIONS_NAME[i], CONDITIONS[i])
@@ -84,6 +108,7 @@ def main():
             conditions += key + ": " + str(data['devices'][key]) + "\n"
                 
         print "Project: " + args.project
+        print "Test_size: " + size
         print conditions
 
         # test
