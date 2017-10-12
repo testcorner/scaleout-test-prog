@@ -452,7 +452,7 @@ def uploads_testing_project():
             
             Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
             
-            ClassNames = Classnames_Json['Classnames']
+            ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
             
             if len(devices_Through_rules) > 0:
                 
