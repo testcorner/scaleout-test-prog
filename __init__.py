@@ -9,6 +9,11 @@ import threading
 import json
 import codecs
 import Queue
+from xml.dom import minidom
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import xml.etree.ElementTree as ET
 
 from subprocess import check_output, CalledProcessError
 from flask import Flask, Response, request, redirect, url_for, jsonify
@@ -17,6 +22,7 @@ from time import localtime, strftime
 from collections import OrderedDict
 
 host='0.0.0.0'
+port=5000
 
 app = Flask(__name__)
 
@@ -41,17 +47,18 @@ app.config['APK_FILE_FOLDER'] = APK_FILE_FOLDER
 app.config['APK_TEST_FILE_FOLDER'] = APK_TEST_FILE_FOLDER
 
 DATA_FORMAT = 'data_format.json'
-DEVICES_INFORNATION = 'devices.json'
+DEVICES_INFORMATION = 'devices.json'
 TESTAPK_CLASSNAMES_JSON = 'ClassNames.json'
 
 app.config['DATA_FORMAT'] = DATA_FORMAT
-app.config['DEVICES_INFORNATION'] = DEVICES_INFORNATION
+app.config['DEVICES_INFORMATION'] = DEVICES_INFORMATION
 app.config['TESTAPK_CLASSNAMES_JSON'] = TESTAPK_CLASSNAMES_JSON
 
 devices_information = None
 
 queue = Queue.Queue()
 write_JSON_queue = Queue.Queue()
+write_XML_queue = Queue.Queue()
 
 def split_lines(s):
     """Splits lines in a way that works even on Windows and old devices.
@@ -106,7 +113,93 @@ def remove_device(array_devices_information, devices_serialno):
 
     array_devices_information.pop(devices_serialno)
 
-    write_JSON(app.config['DEVICES_INFORNATION'], array_devices_information)
+    write_JSON(app.config['DEVICES_INFORMATION'], array_devices_information)
+
+def analyze_test(file_name):
+    with open(file_name) as file:
+        lines = re.split(r'[\r\n]+', file.read().rstrip())
+    test_suite = {'test_cases': [{}], 'failures': '0'}
+    find_error = False
+    current = 0
+    for line in lines:
+        if find_error:
+            if 'INSTRUMENTATION_STATUS:' in line:
+                find_error = False
+                test_suite['test_cases'][current - 1]['failure'] = error_message
+            else:
+                error_message += line + '\n'
+        if 'Error in' in line:
+            find_error = True
+            error_message = ''
+        if 'current=' in line:
+            num = int(line.split('current=')[1]) - 1
+            if num != current:
+                current = num
+                test_suite['test_cases'].append({})
+        if 'numtests=' in line:
+            test_suite['numtests'] = line.split('numtests=')[1]
+        if 'test=' in line:
+            test_suite['test_cases'][current]['name'] = line.split('test=')[1]
+        if 'class=' in line:
+            test_suite['test_cases'][current]['class'] = line.split('class=')[1]
+        if 'Time: ' in line:
+            test_suite['time'] = line.split('Time: ')[1]
+        if 'Failures: ' in line:
+            test_suite['failures'] = line.split('Failures: ')[1]
+    return test_suite
+
+def add_testcase(file_path, test_suite, dev_name, Time):
+    et = ET.parse(os.path.join(file_path, 'output.xml'))
+    et.getroot().attrib['tests'] = str(int(et.getroot().attrib['tests']) + int(test_suite['numtests']))
+    et.getroot().attrib['failures'] = str(int(et.getroot().attrib['failures']) + int(test_suite['failures']))
+    et.getroot().attrib['time'] = str(float(et.getroot().attrib['time']) + float(test_suite['time']))
+    testcase = ET.SubElement(et.getroot(), 'testcase')
+    for test_case in test_suite['test_cases']:
+        testcase.attrib['classname'] = test_case['class']
+        testcase.attrib['name'] = test_case['name']
+        testcase.attrib['serial_number'] = dev_name
+        testcase.attrib['model_name'] = devices_information[dev_name]['model name']
+        testcase.attrib['time'] = test_suite['time']
+        
+        if 'failure' in test_case:
+            fail = ET.SubElement(testcase, 'failure')
+            fail.text = failure
+    et.write(os.path.join(file_path, 'output.xml'))
+
+def create_xml(file_path, test_suite, dev_name, Time):
+    
+    xml = minidom.Document()
+    
+    testsuite = xml.createElement('testsuite')
+    testsuite.setAttribute('name', 'com.example.android.testing.notes.mock.test')
+    testsuite.setAttribute('tests', test_suite['numtests'])
+    testsuite.setAttribute('failures', test_suite['failures'])
+    testsuite.setAttribute('errors', '0')
+    testsuite.setAttribute('skipped', '0')
+    testsuite.setAttribute('time', test_suite['time'])
+    testsuite.setAttribute('timestamp', Time)
+    testsuite.setAttribute('hostname', 'localhost')
+    for test_case in test_suite['test_cases']:
+        testcase = xml.createElement('testcase')
+        testcase.setAttribute('name', test_case['name'])
+        testcase.setAttribute('classname', test_case['class'])
+        testcase.setAttribute('serial_number', dev_name)
+        testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('time', test_suite['time'])
+        
+        if 'failure' in test_case:
+            failure = xml.createElement('failure')
+            print test_case['failure']
+            failure_text = xml.createTextNode(test_case['failure'].decode('utf-8'))
+            failure.appendChild(failure_text)
+            testcase.appendChild(failure)
+        
+        testsuite.appendChild(testcase)
+    xml.appendChild(testsuite)
+    
+    f = open(os.path.join(file_path, 'output.xml'), 'w')
+    f.write(xml.toprettyxml(encoding='utf-8'))
+    f.close()
 
 # get device data_format devices_info key, return value
 def get_device_data(key, devices_serialno, status):
@@ -189,7 +282,6 @@ def get_device_data(key, devices_serialno, status):
             
             return cmd_adb_get_devices_model
 
-
 def get_device_information(array_devices_information, devices_serialno, status):
     
     array_devices_information[devices_serialno] = {}
@@ -201,7 +293,7 @@ def get_device_information(array_devices_information, devices_serialno, status):
         
         array_devices_information[devices_serialno].update({devices_information_data[key]['name'] : get_device_data(key, devices_serialno, status)})
 
-    write_JSON(app.config['DEVICES_INFORNATION'], array_devices_information)
+    write_JSON(app.config['DEVICES_INFORMATION'], array_devices_information)
 
 
 def check_device_information(array_devices_information, devices_serialno, status):
@@ -250,10 +342,10 @@ def check_devices_information(devices_information):
 # This function can check devices.json file isfile and check connect_devices information and status
 def check_devices_json_file():
     global devices_information
-    if check_file_is_file(app.config['DEVICES_INFORNATION']):
+    if check_file_is_file(app.config['DEVICES_INFORMATION']):
         devices_information = json.loads('{}')
-        write_JSON(app.config['DEVICES_INFORNATION'], devices_information)
-    devices_information = read_JSON(app.config['DEVICES_INFORNATION'])
+        write_JSON(app.config['DEVICES_INFORMATION'], devices_information)
+    devices_information = read_JSON(app.config['DEVICES_INFORMATION'])
     check_devices_information(devices_information)
 
 @app.route('/uploads', methods=['GET', 'POST'])
@@ -311,6 +403,15 @@ def upload_file():
         input 'test_project_name','apk_file','apk_test_file' value.
         '''
 
+class thread_write_xml(threading.Thread):
+    def __init__(self, test_project_name, classname, testcase, Time, dev_name):
+        threading.Thread.__init__(self)
+        self.pro_name = test_project_name
+        self.classname = classname
+        self.testcase = testcase
+        self.Time = Time
+        self.dev_name = dev_name
+
 class threadTestClassname(threading.Thread):
     def __init__(self, test_project_name, classname, nowTime):
         threading.Thread.__init__(self)
@@ -325,7 +426,22 @@ class thread_change_devices(threading.Thread):
     def run(self):
         while not write_JSON_queue.empty():
             write_JSON_queue.get()
-            write_JSON(app.config['DEVICES_INFORNATION'], devices_information)
+            write_JSON(app.config['DEVICES_INFORMATION'], devices_information)
+
+class threadtestcase(threading.Thread):
+    def __init__(self, test_project_name, classname, testcase, nowTime, device_name):
+        threading.Thread.__init__(self)
+        self.pro_name = test_project_name
+        self.classname = classname
+        self.testcase = testcase
+        self.Time = nowTime
+        self.dev_name = device_name
+    
+    def run(self):
+        cmd_test_class_name = ['./testing_project.sh', self.pro_name, self.classname + '#' + self.testcase, self.Time, self.dev_name]
+        cmd_testing_output = subprocess.check_output(cmd_test_class_name)
+        write_XML = thread_write_xml(self.pro_name, self.classname, self.testcase, self.Time, self.dev_name)
+        write_XML_queue.put(write_XML)
 
 class threadServer(threading.Thread):
     def __init__(self, test_project_name, classname, nowTime, device_name):
@@ -336,9 +452,12 @@ class threadServer(threading.Thread):
         self.dev_name = device_name
     
     def run(self):
-        print self.pro_name, self.classname, self.Time, self.dev_name
-        cmd_test_class_name = ['./testing_project.sh', self.pro_name, self.classname, self.Time, self.dev_name]
-        cmd_testing_output = subprocess.check_output(cmd_test_class_name)
+        classnames = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], self.pro_name, app.config['TESTAPK_CLASSNAMES_JSON']))
+        for testcase in classnames['ClassNames'][self.classname]:
+            print self.pro_name, self.classname+ "#" + testcase , self.Time, self.dev_name
+            t = threadtestcase(self.pro_name, self.classname, testcase, self.Time, self.dev_name)
+            t.start()
+            t.join()
         devices_information[self.dev_name]['status'] = 'device'
         write_JSON_queue.put(thread_change_devices)
         t = thread_change_devices()
@@ -383,7 +502,6 @@ class threadArrangement(threading.Thread):
             print "uninstall", devices_serialno
             cmd_uninstall_test_class_name = ['./uninstall_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_uninstall_test_class_name)
-
 
 # Uploads Json file to testing project
 @app.route('/uploads_testing_project', methods=['GET', 'POST'])
@@ -466,6 +584,19 @@ def uploads_testing_project():
                         
                 t = threadArrangement(test_project_name, devices_Through_rules, nowTime)
                 t.start()
+            
+                t.join()
+            
+            
+            num_XML = 0
+            while not write_XML_queue.empty():
+                XML_thread = write_XML_queue.get()
+                test_suite = analyze_test(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time,  XML_thread.dev_name, XML_thread.classname + '#' + XML_thread.testcase + '.log'))
+                if(num_XML == 0):
+                    create_xml(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), test_suite, XML_thread.dev_name, XML_thread.Time)
+                else :
+                    add_testcase(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), test_suite, XML_thread.dev_name, XML_thread.Time)
+                num_XML += 1
 
             if count == 0:
                 return "Not devices run projects complete."
@@ -540,4 +671,4 @@ def home():
 
 if __name__ == "__main__":
     app.debug = True
-    app.run(host)
+    app.run(host,port)
