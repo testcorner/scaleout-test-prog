@@ -26,7 +26,7 @@ if [ -d "uploads/$test_project_name" ]; then
 
     # 因為在此無法立即回應，所以我們先將我們的結果放置在設定好的文件當中
 
-    echo `adb -s $test_device_serial_number shell am instrument -w -r -e class $test_classname $apk_test_package/android.support.test.runner.AndroidJUnitRunner` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/$test_classname
+    echo `adb -s $test_device_serial_number shell am instrument -w -r -e class $test_classname $apk_test_package/android.support.test.runner.AndroidJUnitRunner` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/$test_classname.log
 
 else
 
