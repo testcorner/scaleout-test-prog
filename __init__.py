@@ -163,7 +163,7 @@ def add_testcase(file_path, test_suite, dev_name, Time):
         
         if 'failure' in test_case:
             fail = ET.SubElement(testcase, 'failure')
-            fail.text = failure
+            fail.attrib['failure'] = test_case['failure'].decode('utf-8')
     et.write(os.path.join(file_path, 'output.xml'))
 
 def create_xml(file_path, test_suite, dev_name, Time):
