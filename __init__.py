@@ -148,29 +148,35 @@ def analyze_test(file_name):
             test_suite['failures'] = line.split('Failures: ')[1]
     return test_suite
 
-def add_testcase(file_path, test_suite, dev_name, Time):
-    et = ET.parse(os.path.join(file_path, 'output.xml'))
-    et.getroot().attrib['tests'] = str(int(et.getroot().attrib['tests']) + int(test_suite['numtests']))
-    et.getroot().attrib['failures'] = str(int(et.getroot().attrib['failures']) + int(test_suite['failures']))
-    et.getroot().attrib['time'] = str(float(et.getroot().attrib['time']) + float(test_suite['time']))
-    testcase = ET.SubElement(et.getroot(), 'testcase')
+def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
+    name = xml.getElementsByTagName('testsuite')[0]
+    
+    name.attributes['tests'].value = str(int(name.attributes['tests'].value) + int(test_suite['numtests']))
+    name.attributes['failures'].value = str(int(name.attributes['failures'].value) + int(test_suite['failures']))
+    name.attributes['time'].value = str(float(name.attributes['time'].value) + float(test_suite['time']))
     for test_case in test_suite['test_cases']:
-        testcase.attrib['classname'] = test_case['class']
-        testcase.attrib['name'] = test_case['name']
-        testcase.attrib['serial_number'] = dev_name
-        testcase.attrib['model_name'] = devices_information[dev_name]['model name']
-        testcase.attrib['time'] = test_suite['time']
+        testcase = xml.createElement('testcase')
+        testcase.setAttribute('name', test_case['name'])
+        testcase.setAttribute('classname', test_case['class'])
+        testcase.setAttribute('serial_number', dev_name)
+        testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
-            fail = ET.SubElement(testcase, 'failure')
-            fail.attrib['failure'] = test_case['failure'].decode('utf-8')
-    et.write(os.path.join(file_path, 'output.xml'))
+            failure = xml.createElement('failure')
+            failure_text = xml.createTextNode(test_case['failure'].decode('utf-8'))
+            failure.appendChild(failure_text)
+            testcase.appendChild(failure)
+        
+        testsuite.appendChild(testcase)
 
-def create_xml(file_path, test_suite, dev_name, Time):
+#    print name.attributes['tests'].value
+#    print name.attributes['failures'].value
+#    print name.attributes['time'].value
+    return testsuite
+
+def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
     
-    xml = minidom.Document()
-    
-    testsuite = xml.createElement('testsuite')
     testsuite.setAttribute('name', 'com.example.android.testing.notes.mock.test')
     testsuite.setAttribute('tests', test_suite['numtests'])
     testsuite.setAttribute('failures', test_suite['failures'])
@@ -189,17 +195,12 @@ def create_xml(file_path, test_suite, dev_name, Time):
         
         if 'failure' in test_case:
             failure = xml.createElement('failure')
-            print test_case['failure']
             failure_text = xml.createTextNode(test_case['failure'].decode('utf-8'))
             failure.appendChild(failure_text)
             testcase.appendChild(failure)
         
         testsuite.appendChild(testcase)
-    xml.appendChild(testsuite)
-    
-    f = open(os.path.join(file_path, 'output.xml'), 'w')
-    f.write(xml.toprettyxml(encoding='utf-8'))
-    f.close()
+    return testsuite
 
 # get device data_format devices_info key, return value
 def get_device_data(key, devices_serialno, status):
@@ -588,15 +589,25 @@ def uploads_testing_project():
                 t.join()
             
             
+            xml = minidom.Document()
+
+            testsuite = xml.createElement('testsuite')
+            
             num_XML = 0
             while not write_XML_queue.empty():
                 XML_thread = write_XML_queue.get()
                 test_suite = analyze_test(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time,  XML_thread.dev_name, XML_thread.classname + '#' + XML_thread.testcase + '.log'))
+                
                 if(num_XML == 0):
-                    create_xml(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), test_suite, XML_thread.dev_name, XML_thread.Time)
+                    testsuite = create_xml(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), xml, testsuite, test_suite, XML_thread.dev_name, XML_thread.Time)
                 else :
-                    add_testcase(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), test_suite, XML_thread.dev_name, XML_thread.Time)
+                    testsuite = add_testcase(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), xml, testsuite, test_suite, XML_thread.dev_name, XML_thread.Time)
+                xml.appendChild(testsuite)
                 num_XML += 1
+            
+            f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
+            f.write(xml.toprettyxml(encoding='utf-8'))
+            f.close()
 
             if count == 0:
                 return "Not devices run projects complete."

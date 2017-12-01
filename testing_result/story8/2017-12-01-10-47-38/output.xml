@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuite errors="0" failures="0" hostname="localhost" name="com.example.android.testing.notes.mock.test" skipped="0" tests="7" time="20.32" timestamp="2017-12-01-10-47-38">
+	<testcase classname="com.example.android.testing.notes.notedetail.NoteDetailScreenTest" model_name="F1f" name="noteDetails_DisplayedInUi" serial_number="49b8f2da" time="0.431"/>
+	<testcase classname="com.example.android.testing.notes.addnote.AddNoteScreenTest" model_name="HTC_M8x" name="addImageToNote_ShowsThumbnailInUi" serial_number="FA46AWM00962" time="2.195"/>
+	<testcase classname="com.example.android.testing.notes.notes.NotesScreenTest" model_name="F1f" name="addNoteToNotesList" serial_number="49b8f2da" time="6.588"/>
+	<testcase classname="com.example.android.testing.notes.notes.NotesScreenTest" model_name="F1f" name="clickAddNoteButton_opensAddNoteUi" serial_number="49b8f2da" time="1.019"/>
+	<testcase classname="com.example.android.testing.notes.notes.AppNavigationTest" model_name="F1f" name="clickOnAndroidHomeIcon_OpensNavigation" serial_number="49b8f2da" time="1.118"/>
+	<testcase classname="com.example.android.testing.notes.addnote.AddNoteScreenTest" model_name="HTC_M8x" name="errorShownOnEmptyMessage" serial_number="FA46AWM00962" time="7.865"/>
+	<testcase classname="com.example.android.testing.notes.notes.AppNavigationTest" model_name="F1f" name="clickOnStatisticsNavigationItem_ShowsStatisticsScreen" serial_number="49b8f2da" time="1.104"/>
+</testsuite>
