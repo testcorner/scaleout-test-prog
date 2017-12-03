@@ -22,9 +22,9 @@ if [ -d "uploads/$test_project_name" ]; then
 
     apk_test_package=`aapt dump badging uploads/$test_project_name/apk_test_file/$apk_test_file | grep package | awk '{print $2}' | sed s/name=//g | sed s/\'//g`
 
-    echo `adb -s $test_device_serial_number shell pm uninstall $apk_package` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/apk_uninstall.log
+    adb -s $test_device_serial_number shell pm uninstall $apk_package >> testing_result/$test_project_name/$test_data/$test_device_serial_number/apk_uninstall.log
 
-    echo `adb -s $test_device_serial_number shell pm uninstall $apk_test_package` >> testing_result/$test_project_name/$test_data/$test_device_serial_number/test_apk_uninstall.log
+    adb -s $test_device_serial_number shell pm uninstall $apk_test_package >> testing_result/$test_project_name/$test_data/$test_device_serial_number/test_apk_uninstall.log
 
 else
 

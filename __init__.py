@@ -481,18 +481,13 @@ class threadArrangement(threading.Thread):
         threads = []
         while not queue.empty():
             for devices_serialno in self.devices:
-                project_thread = queue.get()
                 if 'device' in devices_information[devices_serialno]['status']:
+                    project_thread = queue.get()
                     devices_information[devices_serialno]['status'] = 'busy'
                     testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
                     threads.append(testclassname_thread)
                     testclassname_thread.start()
                     write_JSON_queue.put(thread_change_devices)
-                    t = thread_change_devices()
-                    t.start()
-                    # break
-                else :
-                    queue.put(project_thread)
                     t = thread_change_devices()
                     t.start()
 
