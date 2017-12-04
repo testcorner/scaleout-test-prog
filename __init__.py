@@ -215,7 +215,7 @@ def get_device_data(key, devices_serialno, status):
         
         return status
 
-    if 'offline' in status or 'unauthorized' in status:
+    if 'offline' in status or 'unauthorized' in status or 'no permissions (verify udev rules); see [http://developer.android.com/tools/device.html]' in status:
         
         return ''
         
@@ -545,7 +545,7 @@ def uploads_testing_project():
             for i in devices_information:
                 
                 # check devices status in devices
-                if devices_information[i]['status'] == "offline":
+                if devices_information[i]['status'] == "offline" or devices_information[i]['status'] == "unauthorized" or devices_information[i]['status'] == "no permissions (verify udev rules); see [http://developer.android.com/tools/device.html]":
                     continue
                 
                 check_testing_qualifications = False
@@ -582,7 +582,6 @@ def uploads_testing_project():
                 t.start()
             
                 t.join()
-            
             
             xml = minidom.Document()
 
