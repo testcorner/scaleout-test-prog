@@ -598,16 +598,15 @@ def uploads_testing_project():
                     testsuite = add_testcase(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), xml, testsuite, test_suite, XML_thread.dev_name, XML_thread.Time)
                 xml.appendChild(testsuite)
                 num_XML += 1
-            
-            f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
-            f.write(xml.toprettyxml(encoding='utf-8'))
-            f.close()
 
             if count == 0:
                 return "Not devices run projects complete."
             #elif count == len(devices_information):
                 #return "All projects complete."
             else:
+		f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
+            	f.write(xml.toprettyxml(encoding='utf-8'))
+            	f.close()
                 return "{0} tested. {1} left.".format(count, len(devices_information) - count)
 
     return '''
