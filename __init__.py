@@ -10,10 +10,6 @@ import json
 import codecs
 import Queue
 from xml.dom import minidom
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
 
 from subprocess import check_output, CalledProcessError
 from flask import Flask, Response, request, redirect, url_for, jsonify
@@ -115,6 +111,20 @@ def remove_device(array_devices_information, devices_serialno):
 
     write_JSON(app.config['DEVICES_INFORMATION'], array_devices_information)
 
+def check_testing_install_status_devices(pro_name, Time, devices_serialno):
+    testing_install_status = False
+    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
+        lines = re.split(r'[\r\n]+', file.read().rstrip())
+    for line in lines:
+        if 'Failure' in line:
+            testing_install_status = True
+    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')) as file:
+        lines = re.split(r'[\r\n]+', file.read().rstrip())
+    for line in lines:
+        if 'Failure' in line:
+            testing_install_status = True
+    return testing_install_status
+
 def analyze_test(file_name):
     with open(file_name) as file:
         lines = re.split(r'[\r\n]+', file.read().rstrip())
@@ -170,9 +180,6 @@ def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
         
         testsuite.appendChild(testcase)
 
-#    print name.attributes['tests'].value
-#    print name.attributes['failures'].value
-#    print name.attributes['time'].value
     return testsuite
 
 def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
@@ -477,7 +484,9 @@ class threadArrangement(threading.Thread):
             print "install", devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_install_test_class_name)
-        
+            if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
+                self.devices.remove(devices_serialno)
+    
         threads = []
         while not queue.empty():
             for devices_serialno in self.devices:
@@ -604,9 +613,13 @@ def uploads_testing_project():
             #elif count == len(devices_information):
                 #return "All projects complete."
             else:
-		f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
-            	f.write(xml.toprettyxml(encoding='utf-8'))
-            	f.close()
+                try:
+                    f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
+                    f.write(xml.toprettyxml(encoding='utf-8'))
+                except IOError:
+                    return "Write Xml Error."
+                else:
+                    f.close()
                 return "{0} tested. {1} left.".format(count, len(devices_information) - count)
 
     return '''
