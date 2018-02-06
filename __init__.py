@@ -84,11 +84,13 @@ def check_dir_exists(path_dir):
     if not os.path.exists(path_dir):
         os.makedirs(path_dir)
 
+# Check Project directory exists
 def check_project_exists(path_dir):
     if os.path.exists(path_dir):
         return False
     return True
 
+# Check file exists
 def check_file_is_file(path_filename):
     if os.path.isfile(path_filename):
         return False
@@ -111,6 +113,7 @@ def remove_device(array_devices_information, devices_serialno):
 
     write_JSON(app.config['DEVICES_INFORMATION'], array_devices_information)
 
+# Check testing apk install exists status
 def check_testing_install_status_devices(pro_name, Time, devices_serialno):
     testing_install_status = False
     with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
@@ -480,6 +483,7 @@ class threadArrangement(threading.Thread):
     
     def run(self):
         
+        # Install apk in Devices
         for devices_serialno in self.devices:
             print "install", devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
@@ -503,6 +507,7 @@ class threadArrangement(threading.Thread):
         for t in threads:
             t.join()
 
+        # Uninstall apk in Devices
         for devices_serialno in self.devices:
             print "uninstall", devices_serialno
             cmd_uninstall_test_class_name = ['./uninstall_apk.sh', self.pro_name, self.Time, devices_serialno]
