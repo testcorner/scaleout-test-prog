@@ -173,6 +173,7 @@ def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -201,6 +202,7 @@ def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -491,18 +493,19 @@ class threadArrangement(threading.Thread):
             if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
                 self.devices.remove(devices_serialno)
     
-        threads = []
-        while not queue.empty():
-            for devices_serialno in self.devices:
-                if 'device' in devices_information[devices_serialno]['status']:
-                    project_thread = queue.get()
-                    devices_information[devices_serialno]['status'] = 'busy'
-                    testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
-                    threads.append(testclassname_thread)
-                    testclassname_thread.start()
-                    write_JSON_queue.put(thread_change_devices)
-                    t = thread_change_devices()
-                    t.start()
+        if len(self.devices) != 0:
+            threads = []
+            while not queue.empty():
+                for devices_serialno in self.devices:
+                    if 'device' in devices_information[devices_serialno]['status']:
+                        project_thread = queue.get()
+                        devices_information[devices_serialno]['status'] = 'busy'
+                        testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
+                        threads.append(testclassname_thread)
+                        testclassname_thread.start()
+                        write_JSON_queue.put(thread_change_devices)
+                        t = thread_change_devices()
+                        t.start()
 
         for t in threads:
             t.join()
@@ -613,7 +616,7 @@ def uploads_testing_project():
                 xml.appendChild(testsuite)
                 num_XML += 1
 
-            if count == 0:
+            if count == 0 or num_XML == 0:
                 return "Not devices run projects complete."
             #elif count == len(devices_information):
                 #return "All projects complete."
