@@ -10,10 +10,6 @@ import json
 import codecs
 import Queue
 from xml.dom import minidom
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import xml.etree.ElementTree as ET
 
 from subprocess import check_output, CalledProcessError
 from flask import Flask, Response, request, redirect, url_for, jsonify
@@ -88,11 +84,13 @@ def check_dir_exists(path_dir):
     if not os.path.exists(path_dir):
         os.makedirs(path_dir)
 
+# Check Project directory exists
 def check_project_exists(path_dir):
     if os.path.exists(path_dir):
         return False
     return True
 
+# Check file exists
 def check_file_is_file(path_filename):
     if os.path.isfile(path_filename):
         return False
@@ -114,6 +112,21 @@ def remove_device(array_devices_information, devices_serialno):
     array_devices_information.pop(devices_serialno)
 
     write_JSON(app.config['DEVICES_INFORMATION'], array_devices_information)
+
+# Check testing apk install exists status
+def check_testing_install_status_devices(pro_name, Time, devices_serialno):
+    testing_install_status = False
+    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
+        lines = re.split(r'[\r\n]+', file.read().rstrip())
+    for line in lines:
+        if 'Failure' in line:
+            testing_install_status = True
+    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')) as file:
+        lines = re.split(r'[\r\n]+', file.read().rstrip())
+    for line in lines:
+        if 'Failure' in line:
+            testing_install_status = True
+    return testing_install_status
 
 def analyze_test(file_name):
     with open(file_name) as file:
@@ -160,6 +173,7 @@ def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -170,9 +184,6 @@ def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
         
         testsuite.appendChild(testcase)
 
-#    print name.attributes['tests'].value
-#    print name.attributes['failures'].value
-#    print name.attributes['time'].value
     return testsuite
 
 def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
@@ -191,6 +202,7 @@ def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -473,27 +485,32 @@ class threadArrangement(threading.Thread):
     
     def run(self):
         
+        # Install apk in Devices
         for devices_serialno in self.devices:
             print "install", devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_install_test_class_name)
-        
-        threads = []
-        while not queue.empty():
-            for devices_serialno in self.devices:
-                if 'device' in devices_information[devices_serialno]['status']:
-                    project_thread = queue.get()
-                    devices_information[devices_serialno]['status'] = 'busy'
-                    testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
-                    threads.append(testclassname_thread)
-                    testclassname_thread.start()
-                    write_JSON_queue.put(thread_change_devices)
-                    t = thread_change_devices()
-                    t.start()
+            if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
+                self.devices.remove(devices_serialno)
+    
+        if len(self.devices) != 0:
+            threads = []
+            while not queue.empty():
+                for devices_serialno in self.devices:
+                    if 'device' in devices_information[devices_serialno]['status']:
+                        project_thread = queue.get()
+                        devices_information[devices_serialno]['status'] = 'busy'
+                        testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
+                        threads.append(testclassname_thread)
+                        testclassname_thread.start()
+                        write_JSON_queue.put(thread_change_devices)
+                        t = thread_change_devices()
+                        t.start()
 
         for t in threads:
             t.join()
 
+        # Uninstall apk in Devices
         for devices_serialno in self.devices:
             print "uninstall", devices_serialno
             cmd_uninstall_test_class_name = ['./uninstall_apk.sh', self.pro_name, self.Time, devices_serialno]
@@ -599,14 +616,18 @@ def uploads_testing_project():
                 xml.appendChild(testsuite)
                 num_XML += 1
 
-            if count == 0:
+            if count == 0 or num_XML == 0:
                 return "Not devices run projects complete."
             #elif count == len(devices_information):
                 #return "All projects complete."
             else:
-		f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
-            	f.write(xml.toprettyxml(encoding='utf-8'))
-            	f.close()
+                try:
+                    f = open(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time, 'output.xml'), 'w')
+                    f.write(xml.toprettyxml(encoding='utf-8'))
+                except IOError:
+                    return "Write Xml Error."
+                else:
+                    f.close()
                 return "{0} tested. {1} left.".format(count, len(devices_information) - count)
 
     return '''
