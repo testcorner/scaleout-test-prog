@@ -126,6 +126,11 @@ def check_testing_install_status_devices(pro_name, Time, devices_serialno):
     for line in lines:
         if 'Failure' in line:
             testing_install_status = True
+
+    if testing_install_status:
+        print "uninstall", devices_serialno
+        cmd_uninstall_test_class_name = ['./uninstall_apk.sh', pro_name, Time, devices_serialno]
+        subprocess.check_output(cmd_uninstall_test_class_name)
     return testing_install_status
 
 def analyze_test(file_name):
@@ -365,22 +370,24 @@ def check_devices_json_file():
 def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
+        # check request is there any apk_file
         if 'apk_file' not in request.files:
-            
             return redirect(request.url)
-        
+    
+        # check request is there any apk_test_file
         if 'apk_test_file' not in request.files:
-            
             return redirect(request.url)
         
         test_project_name = request.form.get('test_project_name')
         apk_file = request.files['apk_file']
         apk_test_file = request.files['apk_test_file']
-        
+
+        #check request is there any test_project_name and apk_file, apk_test_file is not an empty string
         if test_project_name is "" or apk_file.filename == '' or apk_test_file.filename == '':
             return '''
                 input 'test_project_name','apk_file','apk_test_file' value.
                 '''
+
         if apk_file and allowed_file_apk(apk_file.filename) and apk_test_file and allowed_file_apk(apk_test_file.filename):
             
             # Get <UPLOAD_FOLDER> / <test_project_name> / <APK_FILE_FOLDER> path
@@ -490,6 +497,7 @@ class threadArrangement(threading.Thread):
             print "install", devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_install_test_class_name)
+            # Check install apk and test_apk whether Failure
             if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
                 self.devices.remove(devices_serialno)
     
@@ -540,10 +548,10 @@ def uploads_testing_project():
             testing_project_json_filename = secure_filename(testing_project_json.filename)
             
             # Save and <testing_regulation.json> filename to folder <testing_result>
-            testing_project_json.save(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], secure_filename(testing_project_json.filename)))
+            testing_project_json.save(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], testing_project_json_filename))
             
             # read <testing_project_json> file
-            testing_project_json = read_JSON(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], secure_filename(testing_project_json.filename)))
+            testing_project_json = read_JSON(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], testing_project_json_filename))
         
             test_project_name = testing_project_json['project']['project_name']
             
