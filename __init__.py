@@ -344,7 +344,7 @@ def check_devices_information(devices_information):
             if info[0] in devices_information:
                 # print info[0], True
                 if not 'busy' in devices_information[info[0]]['status']:
-                    check_device_information(devices_information, info[0], devices_information[info[0]]['status'])
+                    check_device_information(devices_information, info[0], info[1])
             else:
                 # print info[0], False
                 get_device_information(devices_information, info[0], info[1])
@@ -570,7 +570,6 @@ def uploads_testing_project():
             for i in devices_information:
                 
                 # check devices status in devices
-		
                 if "offline" in devices_information[i]['status'] or "unauthorized" in devices_information[i]['status'] or "no permissions" in devices_information[i]['status']:
                     continue
                 
