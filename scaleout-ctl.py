@@ -3,6 +3,7 @@ import argparse
 import os
 import subprocess
 import json
+from time import localtime, strftime
 
 ALLOWED_EXTENSIONS_APK = set(['apk'])
 CONDITIONS_NAME = ['os', 'API Level', 'deviceType', 'display', 'arch']
@@ -98,8 +99,10 @@ def main():
         for i in xrange(len(CONDITIONS_NAME)):
             data = create_json(data, 'devices', CONDITIONS_NAME[i], CONDITIONS[i])
 
+        uploads_project_filename = strftime('%Y-%m-%d-%H-%M-%S', localtime()) + '_' + args.project +'.json'
+
         # create testing project json
-        with open("testing_project.json", 'w') as outfile:
+        with open(uploads_project_filename, 'w') as outfile:
             json.dump(data, outfile, indent=4)
 
         conditions = ""
@@ -112,10 +115,10 @@ def main():
         print conditions
 
         # test
-        subprocess.call(['curl', '-F', 'testing_project_json=@testing_project.json', '-X', 'POST', args.address + '/uploads_testing_project'])
+        subprocess.call(['curl', '-F', 'testing_project_json=@'+uploads_project_filename, '-X', 'POST', args.address + '/uploads_testing_project'])
 
         # remove testing project json
-        subprocess.call(['rm', 'testing_project.json'])
+        subprocess.call(['rm', uploads_project_filename])
     
     elif args.status:
         # get sevices status

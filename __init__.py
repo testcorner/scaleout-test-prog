@@ -126,6 +126,11 @@ def check_testing_install_status_devices(pro_name, Time, devices_serialno):
     for line in lines:
         if 'Failure' in line:
             testing_install_status = True
+
+    if testing_install_status:
+        print "uninstall", devices_serialno
+        cmd_uninstall_test_class_name = ['./uninstall_apk.sh', pro_name, Time, devices_serialno]
+        subprocess.check_output(cmd_uninstall_test_class_name)
     return testing_install_status
 
 def analyze_test(file_name):
@@ -173,6 +178,7 @@ def add_testcase(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -201,6 +207,7 @@ def create_xml(file_path, xml, testsuite, test_suite, dev_name, Time):
         testcase.setAttribute('classname', test_case['class'])
         testcase.setAttribute('serial_number', dev_name)
         testcase.setAttribute('model_name', devices_information[dev_name]['model name'])
+        testcase.setAttribute('os', devices_information[dev_name]['release'])
         testcase.setAttribute('time', test_suite['time'])
         
         if 'failure' in test_case:
@@ -225,7 +232,7 @@ def get_device_data(key, devices_serialno, status):
         
         return status
 
-    if 'offline' in status or 'unauthorized' in status or 'no permissions (verify udev rules); see [http://developer.android.com/tools/device.html]' in status:
+    if 'offline' in status or 'unauthorized' in status or 'no permissions' in status:
         
         return ''
         
@@ -337,7 +344,7 @@ def check_devices_information(devices_information):
             if info[0] in devices_information:
                 # print info[0], True
                 if not 'busy' in devices_information[info[0]]['status']:
-                    check_device_information(devices_information, info[0], devices_information[info[0]]['status'])
+                    check_device_information(devices_information, info[0], info[1])
             else:
                 # print info[0], False
                 get_device_information(devices_information, info[0], info[1])
@@ -363,22 +370,24 @@ def check_devices_json_file():
 def upload_file():
     if request.method == 'POST':
         # check if the post request has the file part
+        # check request is there any apk_file
         if 'apk_file' not in request.files:
-            
             return redirect(request.url)
-        
+    
+        # check request is there any apk_test_file
         if 'apk_test_file' not in request.files:
-            
             return redirect(request.url)
         
         test_project_name = request.form.get('test_project_name')
         apk_file = request.files['apk_file']
         apk_test_file = request.files['apk_test_file']
-        
+
+        #check request is there any test_project_name and apk_file, apk_test_file is not an empty string
         if test_project_name is "" or apk_file.filename == '' or apk_test_file.filename == '':
             return '''
                 input 'test_project_name','apk_file','apk_test_file' value.
                 '''
+
         if apk_file and allowed_file_apk(apk_file.filename) and apk_test_file and allowed_file_apk(apk_test_file.filename):
             
             # Get <UPLOAD_FOLDER> / <test_project_name> / <APK_FILE_FOLDER> path
@@ -488,21 +497,23 @@ class threadArrangement(threading.Thread):
             print "install", devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_install_test_class_name)
+            # Check install apk and test_apk whether Failure
             if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
                 self.devices.remove(devices_serialno)
     
-        threads = []
-        while not queue.empty():
-            for devices_serialno in self.devices:
-                if 'device' in devices_information[devices_serialno]['status']:
-                    project_thread = queue.get()
-                    devices_information[devices_serialno]['status'] = 'busy'
-                    testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
-                    threads.append(testclassname_thread)
-                    testclassname_thread.start()
-                    write_JSON_queue.put(thread_change_devices)
-                    t = thread_change_devices()
-                    t.start()
+        if len(self.devices) != 0:
+            threads = []
+            while not queue.empty():
+                for devices_serialno in self.devices:
+                    if 'device' in devices_information[devices_serialno]['status']:
+                        project_thread = queue.get()
+                        devices_information[devices_serialno]['status'] = 'busy'
+                        testclassname_thread = threadServer(project_thread.pro_name, project_thread.classname, project_thread.Time, devices_serialno)
+                        threads.append(testclassname_thread)
+                        testclassname_thread.start()
+                        write_JSON_queue.put(thread_change_devices)
+                        t = thread_change_devices()
+                        t.start()
 
         for t in threads:
             t.join()
@@ -537,10 +548,10 @@ def uploads_testing_project():
             testing_project_json_filename = secure_filename(testing_project_json.filename)
             
             # Save and <testing_regulation.json> filename to folder <testing_result>
-            testing_project_json.save(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], secure_filename(testing_project_json.filename)))
+            testing_project_json.save(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], testing_project_json_filename))
             
             # read <testing_project_json> file
-            testing_project_json = read_JSON(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], secure_filename(testing_project_json.filename)))
+            testing_project_json = read_JSON(os.path.join(app.config['UPLOAD_TESTING_PROJECT'], testing_project_json_filename))
         
             test_project_name = testing_project_json['project']['project_name']
             
@@ -559,7 +570,7 @@ def uploads_testing_project():
             for i in devices_information:
                 
                 # check devices status in devices
-                if devices_information[i]['status'] == "offline" or devices_information[i]['status'] == "unauthorized" or devices_information[i]['status'] == "no permissions (verify udev rules); see [http://developer.android.com/tools/device.html]":
+                if "offline" in devices_information[i]['status'] or "unauthorized" in devices_information[i]['status'] or "no permissions" in devices_information[i]['status']:
                     continue
                 
                 check_testing_qualifications = False
@@ -613,7 +624,7 @@ def uploads_testing_project():
                 xml.appendChild(testsuite)
                 num_XML += 1
 
-            if count == 0:
+            if count == 0 or num_XML == 0:
                 return "Not devices run projects complete."
             #elif count == len(devices_information):
                 #return "All projects complete."
