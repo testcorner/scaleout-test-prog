@@ -501,9 +501,10 @@ class threadArrangement(threading.Thread):
             if check_testing_install_status_devices(self.pro_name, self.Time, devices_serialno):
                 self.devices.remove(devices_serialno)
     
-        if len(self.devices) != 0:
-            threads = []
-            while not queue.empty():
+    
+        threads = []
+        while not queue.empty():
+            if len(self.devices) != 0:
                 for devices_serialno in self.devices:
                     if 'device' in devices_information[devices_serialno]['status']:
                         project_thread = queue.get()
@@ -514,6 +515,8 @@ class threadArrangement(threading.Thread):
                         write_JSON_queue.put(thread_change_devices)
                         t = thread_change_devices()
                         t.start()
+            else :
+                project_thread = queue.get()
 
         for t in threads:
             t.join()
@@ -636,7 +639,7 @@ def uploads_testing_project():
                     return "Write Xml Error."
                 else:
                     f.close()
-                return "{0} tested. {1} left.".format(count, len(devices_information) - count)
+                return "{0}\n{1} tested. {2} left.".format(xml.toprettyxml(encoding='utf-8'),count, len(devices_information) - count)
 
     return '''
         input 'testing_project_json' key and value.
