@@ -116,16 +116,19 @@ def remove_device(array_devices_information, devices_serialno):
 # Check testing apk install exists status
 def check_testing_install_status_devices(pro_name, Time, devices_serialno):
     testing_install_status = False
-    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
-        lines = re.split(r'[\r\n]+', file.read().rstrip())
-    for line in lines:
-        if 'Failure' in line:
-            testing_install_status = True
-    with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')) as file:
-        lines = re.split(r'[\r\n]+', file.read().rstrip())
-    for line in lines:
-        if 'Failure' in line:
-            testing_install_status = True
+    if not check_file_is_file(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) or not check_file_is_file(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')):
+        with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
+            lines = re.split(r'[\r\n]+', file.read().rstrip())
+        for line in lines:
+            if 'Failure' in line:
+                testing_install_status = True
+        with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')) as file:
+            lines = re.split(r'[\r\n]+', file.read().rstrip())
+        for line in lines:
+            if 'Failure' in line:
+                testing_install_status = True
+    else :
+        testing_install_status = True
 
     if testing_install_status:
         print "uninstall", devices_serialno
