@@ -412,7 +412,8 @@ def upload_file():
             
             cmd_test_apk_classnames_json = ['java', '-jar']
             cmd_test_apk_classnames_json.extend(['testapk_testClassname.jar'])
-            cmd_test_apk_classnames_json.extend(['-i', os.path.join(test_project_apk_test_file_folder, apk_test_file_filename)])
+            cmd_test_apk_classnames_json.extend(['-apk', os.path.join(test_project_apk_file_folder, apk_file_filename)])
+            cmd_test_apk_classnames_json.extend(['-testapk', os.path.join(test_project_apk_test_file_folder, apk_test_file_filename)])
             
             subprocess.check_output(cmd_test_apk_classnames_json)
 
@@ -570,13 +571,16 @@ def uploads_testing_project():
             
             devices_Through_rules = []
             
+            Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
+            
+            ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
+            
             for i in devices_information:
                 
                 # check devices status in devices
                 if "offline" in devices_information[i]['status'] or "unauthorized" in devices_information[i]['status'] or "no permissions" in devices_information[i]['status']:
                     continue
-                
-                check_testing_qualifications = False
+            
                 count_testing_qualifications_j = 0
                 
                 for j in testing_project_json['devices']:
@@ -585,16 +589,16 @@ def uploads_testing_project():
                             count_testing_qualifications_j += 1
                             break
 
-                if count_testing_qualifications_j == len(testing_project_json['devices']):
-                    check_testing_qualifications = True
+
+                # print int(devices_information[i]['API Level'])
+                # print 'ApkConfig: ', int(Classnames_Json['ApkConfig'][0])
+                # print 'TestApkConfig: ', int(Classnames_Json['TestApkConfig'][0])
+
+                if count_testing_qualifications_j == len(testing_project_json['devices']) and int(devices_information[i]['API Level']) >= int(Classnames_Json['ApkConfig'][0]) and int(devices_information[i]['API Level']) >=  int(Classnames_Json['TestApkConfig'][0]) :
                     devices_Through_rules.append(devices_information[i]['serialno'])
             
             # Get current time
             nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
-            
-            Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
-            
-            ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
             
             if len(devices_Through_rules) > 0:
                 
