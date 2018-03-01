@@ -603,6 +603,10 @@ def uploads_testing_project():
             # Get current time
             nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
             
+            Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
+            
+            ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
+            
             if len(devices_Through_rules) > 0:
                 
                 for devices_serialno in devices_Through_rules:
