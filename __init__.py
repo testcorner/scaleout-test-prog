@@ -69,11 +69,13 @@ def split_lines(s):
     # ['foo', '']
     return re.split(r'[\r\n]+', s.rstrip())
 
+# Read Json file
 def read_JSON(path_filename):
     with open(path_filename) as data_file:
         data = json.load(data_file, object_pairs_hook=OrderedDict)
     return data
 
+# Write Json file
 def write_JSON(path_filename, data_json):
     with open(path_filename, 'w') as f:
         f.write(json.dumps(data_json))
@@ -116,6 +118,7 @@ def remove_device(array_devices_information, devices_serialno):
 # Check testing apk install exists status
 def check_testing_install_status_devices(pro_name, Time, devices_serialno):
     testing_install_status = False
+    # if testing_result_project_date_device folder have apk_install.log & testapk_install.log file
     if not check_file_is_file(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) or not check_file_is_file(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'test_apk_install.log')):
         with open(os.path.join(app.config['TESTING_RESULT_PROJECT'], pro_name, Time, devices_serialno, 'apk_install.log')) as file:
             lines = re.split(r'[\r\n]+', file.read().rstrip())
@@ -131,7 +134,7 @@ def check_testing_install_status_devices(pro_name, Time, devices_serialno):
         testing_install_status = True
 
     if testing_install_status:
-        print "uninstall", devices_serialno
+        print "uninstall", pro_name, Time, devices_serialno
         cmd_uninstall_test_class_name = ['./uninstall_apk.sh', pro_name, Time, devices_serialno]
         subprocess.check_output(cmd_uninstall_test_class_name)
     return testing_install_status
@@ -498,7 +501,7 @@ class threadArrangement(threading.Thread):
         
         # Install apk in Devices
         for devices_serialno in self.devices:
-            print "install", devices_serialno
+            print "install", self.pro_name, self.Time, devices_serialno
             cmd_install_test_class_name = ['./install_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_install_test_class_name)
             # Check install apk and test_apk whether Failure
@@ -527,7 +530,7 @@ class threadArrangement(threading.Thread):
 
         # Uninstall apk in Devices
         for devices_serialno in self.devices:
-            print "uninstall", devices_serialno
+            print "uninstall", self.pro_name, self.Time, devices_serialno
             cmd_uninstall_test_class_name = ['./uninstall_apk.sh', self.pro_name, self.Time, devices_serialno]
             subprocess.check_output(cmd_uninstall_test_class_name)
 
@@ -574,66 +577,67 @@ def uploads_testing_project():
             
             devices_Through_rules = []
             
+            # Read project testing Classname json file
             Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
             
+            # Get upload_testing_project_json testsize to get Classname json file
             ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
             
             for i in devices_information:
-                
                 # check devices status in devices
                 if "offline" in devices_information[i]['status'] or "unauthorized" in devices_information[i]['status'] or "no permissions" in devices_information[i]['status']:
                     continue
             
                 count_testing_qualifications_j = 0
-                
+                # Check devices is not through upload_testing_project rules
                 for j in testing_project_json['devices']:
                     for k in xrange(len(testing_project_json['devices'][j])):
                         if testing_project_json['devices'][j][k] == "" or devices_information[i][devices_information_format[j]['name']] == testing_project_json['devices'][j][k]:
                             count_testing_qualifications_j += 1
                             break
-
-
-                # print int(devices_information[i]['API Level'])
-                # print 'ApkConfig: ', int(Classnames_Json['ApkConfig'][0])
-                # print 'TestApkConfig: ', int(Classnames_Json['TestApkConfig'][0])
-
+                
+                # Check devices is not through all rules and check devices meets the apk & testapk greater or equal to minsdkversion
                 if count_testing_qualifications_j == len(testing_project_json['devices']) and int(devices_information[i]['API Level']) >= int(Classnames_Json['ApkConfig'][0]) and int(devices_information[i]['API Level']) >=  int(Classnames_Json['TestApkConfig'][0]) :
                     devices_Through_rules.append(devices_information[i]['serialno'])
             
             # Get current time
             nowTime = strftime('%Y-%m-%d-%H-%M-%S', localtime())
             
-            Classnames_Json = read_JSON(os.path.join(app.config['UPLOAD_FOLDER'], test_project_name, app.config['TESTAPK_CLASSNAMES_JSON']))
-            
-            ClassNames = Classnames_Json[testing_project_json['project']['test_size']]
-            
+            # Check through devices greater to 0
             if len(devices_Through_rules) > 0:
-                
+                # Check through rules devices folder is exists
                 for devices_serialno in devices_Through_rules:
                     check_dir_exists(os.path.join(app.config['TESTING_RESULT_PROJECT'], test_project_name, nowTime, devices_serialno))
                     count += 1
                 
+                # push testing Classname to queue
                 for classname in ClassNames:
                     classname_thread = threadTestClassname(test_project_name, classname, nowTime)
                     queue.put(classname_thread)
-                        
+                
                 t = threadArrangement(test_project_name, devices_Through_rules, nowTime)
                 t.start()
-            
+                
                 t.join()
             
+            # Create testing result xml document
             xml = minidom.Document()
 
+            # Create testsuite Element
             testsuite = xml.createElement('testsuite')
             
             num_XML = 0
             while not write_XML_queue.empty():
+                # Get result queue
                 XML_thread = write_XML_queue.get()
+                # Assemble the test data
                 test_suite = analyze_test(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time,  XML_thread.dev_name, XML_thread.classname + '#' + XML_thread.testcase + '.log'))
                 
+                # if The first data, Attribute testsuite and Attribute testcase xml data
                 if(num_XML == 0):
                     testsuite = create_xml(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), xml, testsuite, test_suite, XML_thread.dev_name, XML_thread.Time)
                 else :
+                    # if not first data, attribute testsuite and Attribute testcase xml data
                     testsuite = add_testcase(os.path.join(app.config['TESTING_RESULT_PROJECT'], XML_thread.pro_name, XML_thread.Time), xml, testsuite, test_suite, XML_thread.dev_name, XML_thread.Time)
                 xml.appendChild(testsuite)
                 num_XML += 1
